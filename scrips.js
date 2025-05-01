@@ -67,46 +67,61 @@ negativeSplitToggle.addEventListener('change', () => { // Kjører når negativ s
  * @param {Event} event - Skjemaets submit-event.
  */
 function handleFormSubmit(event) {
+    console.log("handleFormSubmit startet"); // Debugging
     event.preventDefault(); // Forhindrer standard skjemainnsending (siderefresh)
+    console.log("preventDefault kalt"); // Debugging
     clearError(); // Fjern gamle feil først
     hideResults(); // Skjul gamle resultater
 
     // Bruk try-catch for generell feilhåndtering under beregningene
     try {
+        console.log("Inne i try-blokk"); // Debugging
         const distanceKm = getSelectedDistance(); // Henter valgt/oppgitt distanse
         const elevationM = getElevation(); // Henter oppgitte høydemeter
         const timeInputs = getTimeInputs(); // Henter tid-input (timer, minutter, sekunder)
         const useNegativeSplit = negativeSplitToggle.checked; // Sjekker om negativ splitt er valgt
 
+        console.log("Input hentet:", { distanceKm, elevationM, timeInputs, useNegativeSplit }); // Debugging
+
         // Validering sjekkes først
         if (!validateInputs(distanceKm, elevationM, timeInputs)) {
+            console.log("Validering feilet"); // Debugging
             return; // Stopp hvis validering feiler
         }
+        console.log("Validering OK"); // Debugging
 
         const totalSeconds = calculateTotalSeconds(timeInputs); // Beregner total tid i sekunder
+        console.log("TotalSeconds beregnet:", totalSeconds); // Debugging
 
         // Sjekk total tid etter validering
         if (totalSeconds <= 0) {
             showError("Total tid må være større enn null.");
+            console.log("Feil: Total tid er 0 eller mindre"); // Debugging
             return;
         }
 
         // Utfører alle løpsberegningene
+        console.log("Starter performCalculations..."); // Debugging
         const calculations = performCalculations(distanceKm, elevationM, totalSeconds);
+        console.log("Calculations fullført:", calculations); // Debugging
 
         // Sjekk for NaN (Not a Number) eller Infinity i kritiske beregninger før visning
         if (!Number.isFinite(calculations.avgActualPaceSecondsPerKm) ||
             !Number.isFinite(calculations.avgAdjustedPaceSecondsPerKm) ||
             !Number.isFinite(calculations.speedKph)) {
             showError("Kunne ikke beregne resultater. Sjekk inputverdiene.");
+            console.log("Feil: Ugyldige beregningsresultater (NaN/Infinity)"); // Debugging
             return;
         }
+        console.log("Beregninger er gyldige (Finite)"); // Debugging
 
         // Viser de beregnede resultatene på siden
+        console.log("Starter displayResults..."); // Debugging
         displayResults(calculations, distanceKm, totalSeconds, elevationM > 0, useNegativeSplit, timeInputs);
+        console.log("displayResults fullført."); // Debugging
 
     } catch (error) {
-        console.error("En uventet feil oppstod:", error); // Logg feilen til konsollen for debugging
+        console.error("En uventet feil oppstod i handleFormSubmit:", error); // Logg feilen til konsollen for debugging
         showError("En uventet feil oppstod under beregningen."); // Vis generell feilmelding til brukeren
     }
 }
@@ -135,7 +150,10 @@ function handleDistanceChange() {
  */
 function getSelectedDistance() {
     const selection = distanceSelect.value;
-    if (selection === 'custom') return parseFloat(customDistanceInput.value); // Hent fra egendefinert felt
+    if (selection === 'custom') {
+        const customValue = customDistanceInput.value.replace(',', '.'); // Erstatt komma med punktum
+        return parseFloat(customValue); // Hent fra egendefinert felt
+    }
     if (selection === 'preset') return NaN; // Ingen distanse valgt
     return parseFloat(selection); // Hent fra forhåndsinnstilt verdi
 }
@@ -145,7 +163,7 @@ function getSelectedDistance() {
  * @returns {number} Antall høydemeter (standard 0).
  */
 function getElevation() {
-    const elevationStr = elevationInput.value.trim() || '0'; // Hent verdi, bruk '0' hvis tomt
+    const elevationStr = elevationInput.value.trim().replace(',', '.') || '0'; // Erstatt komma, bruk '0' hvis tomt
     return parseFloat(elevationStr);
 }
 
@@ -154,10 +172,12 @@ function getElevation() {
  * @returns {object} Et objekt med tid-verdiene som strenger.
  */
 function getTimeInputs() {
+    // Erstatt komma med punktum for sekunder for å håndtere desimaltegn
+    const secondsStr = secondsInput.value.trim().replace(',', '.') || '0';
     return {
         hours: hoursInput.value.trim() || '0', // Hent timer, bruk '0' hvis tomt
         minutes: minutesInput.value.trim() || '0', // Hent minutter, bruk '0' hvis tomt
-        seconds: secondsInput.value.trim() || '0' // Hent sekunder, bruk '0' hvis tomt
+        seconds: secondsStr // Hent sekunder (med punktum), bruk '0' hvis tomt
     };
 }
 
@@ -169,16 +189,31 @@ function getTimeInputs() {
  * @returns {boolean} True hvis input er gyldig, ellers false.
  */
 function validateInputs(distanceKm, elevationM, timeInputs) {
-    if (distanceSelect.value === 'preset') { showError("Vennligst velg en distanse."); return false; }
-    if (isNaN(distanceKm) || distanceKm <= 0) { showError("Ugyldig eller manglende distanse."); return false; }
-    if (isNaN(elevationM) || elevationM < 0) { showError("Ugyldig verdi for høydemeter."); return false; }
-    const hours = parseFloat(timeInputs.hours);
-    const minutes = parseFloat(timeInputs.minutes);
-    const seconds = parseFloat(timeInputs.seconds);
-    if (isNaN(hours) || isNaN(minutes) || isNaN(seconds)) { showError("Tidsfeltene må inneholde gyldige tall."); return false; }
-    if (hours < 0 || minutes < 0 || seconds < 0) { showError("Tidsverdier kan ikke være negative."); return false; }
-    if (minutes >= 60 || seconds >= 60) { showError("Minutter og sekunder må være under 60."); return false; }
-    return true; // Alt er gyldig
+     if (distanceSelect.value === 'preset') { showError("Vennligst velg en distanse."); return false; }
+     // Bruk Number.isFinite for å sjekke om det faktisk er et tall (ikke NaN eller Infinity)
+     if (!Number.isFinite(distanceKm) || distanceKm <= 0) { showError("Ugyldig eller manglende distanse. Bruk punktum for desimaler."); return false; }
+     if (!Number.isFinite(elevationM) || elevationM < 0) { showError("Ugyldig verdi for høydemeter."); return false; }
+
+     const hours = parseFloat(timeInputs.hours);
+     const minutes = parseFloat(timeInputs.minutes);
+     const seconds = parseFloat(timeInputs.seconds); // Sekunder kan ha desimaler
+
+     // Sjekk om alle tidsdelene er gyldige tall
+     if (!Number.isFinite(hours) || !Number.isFinite(minutes) || !Number.isFinite(seconds)) {
+         showError("Tidsfeltene må inneholde gyldige tall. Bruk punktum for desimaler i sekunder.");
+         return false;
+     }
+     // Sjekk for negative verdier
+     if (hours < 0 || minutes < 0 || seconds < 0) {
+         showError("Tidsverdier kan ikke være negative.");
+         return false;
+     }
+     // Sjekk at minutter og sekunder (heltallsdelen) er under 60
+     if (Math.floor(minutes) >= 60 || Math.floor(seconds) >= 60) {
+         showError("Minutter og heltallsdelen av sekunder må være under 60.");
+         return false;
+     }
+     return true; // Alt er gyldig
 }
 
 /**
@@ -189,10 +224,10 @@ function validateInputs(distanceKm, elevationM, timeInputs) {
 function calculateTotalSeconds(timeInputs) {
     const hours = parseFloat(timeInputs.hours);
     const minutes = parseFloat(timeInputs.minutes);
-    const seconds = parseFloat(timeInputs.seconds);
+    const seconds = parseFloat(timeInputs.seconds); // Sekunder kan ha desimaler
     // Sikre at resultatet er et gyldig tall
     const total = (hours * 3600) + (minutes * 60) + seconds;
-    return isNaN(total) ? 0 : total; // Returner 0 hvis beregningen gir NaN
+    return Number.isFinite(total) ? total : 0; // Returner 0 hvis beregningen gir NaN/Infinity
 }
 
 /**
@@ -203,9 +238,10 @@ function calculateTotalSeconds(timeInputs) {
  * @returns {object} Et objekt som inneholder alle beregnede verdier.
  */
 function performCalculations(distanceKm, elevationM, totalSeconds) {
-    // Sikre at input er gyldig før beregning
-     if (distanceKm <= 0 || totalSeconds <= 0) {
+    // Dobbeltsjekk at input er gyldig før beregning
+     if (!Number.isFinite(distanceKm) || distanceKm <= 0 || !Number.isFinite(totalSeconds) || totalSeconds <= 0) {
          // Returner et objekt med NaN for å indikere feil hvis input er ugyldig
+         console.warn("Ugyldig input til performCalculations:", {distanceKm, totalSeconds});
          return {
              avgActualPaceSecondsPerKm: NaN, avgAdjustedPaceSecondsPerKm: NaN, speedKph: NaN,
              avgLapTimeSeconds: NaN, equivalentFlatTotalSeconds: NaN,
@@ -221,7 +257,6 @@ function performCalculations(distanceKm, elevationM, totalSeconds) {
     const speedKph = distanceKm / totalHours; // Gjennomsnittlig hastighet (km/t)
 
     // Beregn ekvivalent flat distanse ved å legge til "ekstra" distanse for høydemeter
-    // Bruker Math.max for å unngå 0 eller negativ distanse hvis elevationM er 0 eller negativ (selv om validert)
     const equivalentFlatDistanceKm = Math.max(0.001, distanceKm + (elevationM / 1000) * ELEVATION_ADJUSTMENT_FACTOR);
     const avgAdjustedPaceSecondsPerKm = totalSeconds / equivalentFlatDistanceKm; // Gjennomsnittlig justert pace (GAP) (sek/km)
 
@@ -239,16 +274,19 @@ function performCalculations(distanceKm, elevationM, totalSeconds) {
     let estimatedHalfMarathonSeconds = NaN; // Initialiser til NaN
     let estimatedHalfMarathonPaceSecsPerKm = NaN; // Initialiser til NaN
     // Sjekk at basis for Riegel (justert tid og distanse) er gyldig
-    if (equivalentFlatTotalSeconds > 0 && distanceKm > 0) {
+    if (Number.isFinite(equivalentFlatTotalSeconds) && equivalentFlatTotalSeconds > 0 && distanceKm > 0) {
         // Estimer halvmaratontid ved hjelp av Riegels formel basert på justert tid/innsats
         estimatedHalfMarathonSeconds = equivalentFlatTotalSeconds * Math.pow(HALF_MARATHON_KM / distanceKm, RIEGEL_EXPONENT);
-        estimatedHalfMarathonPaceSecsPerKm = estimatedHalfMarathonSeconds / HALF_MARATHON_KM; // Estimer pace for halvmaraton
+        // Sjekk om HM-tid er gyldig før beregning av pace
+        if (Number.isFinite(estimatedHalfMarathonSeconds) && estimatedHalfMarathonSeconds > 0) {
+            estimatedHalfMarathonPaceSecsPerKm = estimatedHalfMarathonSeconds / HALF_MARATHON_KM; // Estimer pace for halvmaraton
+        }
     }
 
     // Beregn anbefalt intervallpace (1000m) basert på estimert halvmaratonpace
-    const recommendedIntervalPaceSecondsPerKm = estimatedHalfMarathonPaceSecsPerKm > 0
+    const recommendedIntervalPaceSecondsPerKm = Number.isFinite(estimatedHalfMarathonPaceSecsPerKm) && estimatedHalfMarathonPaceSecsPerKm > 0
         ? estimatedHalfMarathonPaceSecsPerKm - INTERVAL_PACE_ADJUSTMENT // 5 sek raskere enn HM-pace
-        : NaN; // Sett til NaN hvis HM-pace ikke kunne beregnes
+        : NaN; // Sett til NaN hvis HM-pace ikke kunne beregnes eller er ugyldig
 
     // Returner alle beregnede verdier
     return {
@@ -272,12 +310,13 @@ function performCalculations(distanceKm, elevationM, totalSeconds) {
  */
 function displayResults(calculations, distanceKm, totalSeconds, hasElevation, useNegativeSplit, originalTimeInputs) {
     // --- Formater og Vis Hovedresultater ---
-    const formattedAvgActualPace = formatTimeMMSS(calculations.avgActualPaceSecondsPerKm, true); // mm:ss.s
-    const formattedAvgAdjustedPace = formatTimeMMSS(calculations.avgAdjustedPaceSecondsPerKm, true); // mm:ss.s
-    const formattedAvgLapTime = formatTimeMMSS(calculations.avgLapTimeSeconds, false); // mm:ss
-    const formattedSpeed = calculations.speedKph.toFixed(2); // To desimaler
-    const formattedExact800mTime = formatTimeLong(calculations.exact800mSeconds); // h:mm:ss eller m:ss
-    const formattedExact200mTime = formatTimeLong(calculations.exact200mSeconds); // h:mm:ss eller m:ss
+    // Bruk Number.isFinite for å sikre at vi ikke prøver å formatere NaN/Infinity
+    const formattedAvgActualPace = Number.isFinite(calculations.avgActualPaceSecondsPerKm) ? formatTimeMMSS(calculations.avgActualPaceSecondsPerKm, true) : "N/A";
+    const formattedAvgAdjustedPace = Number.isFinite(calculations.avgAdjustedPaceSecondsPerKm) ? formatTimeMMSS(calculations.avgAdjustedPaceSecondsPerKm, true) : "N/A";
+    const formattedAvgLapTime = Number.isFinite(calculations.avgLapTimeSeconds) ? formatTimeMMSS(calculations.avgLapTimeSeconds, false) : "N/A";
+    const formattedSpeed = Number.isFinite(calculations.speedKph) ? calculations.speedKph.toFixed(2) : "N/A";
+    const formattedExact800mTime = Number.isFinite(calculations.exact800mSeconds) ? formatTimeLong(calculations.exact800mSeconds) : "N/A";
+    const formattedExact200mTime = Number.isFinite(calculations.exact200mSeconds) ? formatTimeLong(calculations.exact200mSeconds) : "N/A";
 
     paceResultSpan.textContent = `${formattedAvgActualPace} /km`;
     adjustedPaceResultSpan.textContent = `${formattedAvgAdjustedPace} /km`;
@@ -309,10 +348,11 @@ function displayResults(calculations, distanceKm, totalSeconds, hasElevation, us
     generateAndDisplayPredictions(distanceKm, calculations.equivalentFlatTotalSeconds);
 
     // --- Vis Intervalltips ---
-    const formattedOriginalTime = formatTimeLong(calculateTotalSeconds(originalTimeInputs)); // Formater opprinnelig tid
-    const formattedEstimatedHmTime = formatTimeLong(calculations.estimatedHalfMarathonSeconds); // Formater estimert HM-tid
-    const formattedEstimatedHmPace = formatTimeMMSS(calculations.estimatedHalfMarathonPaceSecsPerKm, false); // Formater estimert HM-pace
-    const formattedRecommendedIntervalPace = formatTimeMMSS(calculations.recommendedIntervalPaceSecondsPerKm, false); // Formater anbefalt intervallpace
+    const originalTotalSeconds = calculateTotalSeconds(originalTimeInputs);
+    const formattedOriginalTime = Number.isFinite(originalTotalSeconds) ? formatTimeLong(originalTotalSeconds) : "N/A";
+    const formattedEstimatedHmTime = Number.isFinite(calculations.estimatedHalfMarathonSeconds) ? formatTimeLong(calculations.estimatedHalfMarathonSeconds) : "N/A";
+    const formattedEstimatedHmPace = Number.isFinite(calculations.estimatedHalfMarathonPaceSecsPerKm) ? formatTimeMMSS(calculations.estimatedHalfMarathonPaceSecsPerKm, false) : "N/A";
+    const formattedRecommendedIntervalPace = Number.isFinite(calculations.recommendedIntervalPaceSecondsPerKm) ? formatTimeMMSS(calculations.recommendedIntervalPaceSecondsPerKm, false) : "N/A";
 
     intervalBasisDistanceSpan.textContent = `${distanceKm.toFixed(2)} km`; // Vis opprinnelig distanse
     intervalBasisTimeSpan.textContent = formattedOriginalTime; // Vis opprinnelig tid
@@ -320,8 +360,8 @@ function displayResults(calculations, distanceKm, totalSeconds, hasElevation, us
     estimatedHmPaceSpan.textContent = formattedEstimatedHmPace; // Vis estimert HM-pace
     recommendedIntervalPaceSpan.textContent = formattedRecommendedIntervalPace; // Vis anbefalt intervallpace
 
-    // Vis intervallseksjonen kun hvis anbefalt pace er gyldig
-     if (calculations.recommendedIntervalPaceSecondsPerKm > 0 && Number.isFinite(calculations.recommendedIntervalPaceSecondsPerKm)) {
+    // Vis intervallseksjonen kun hvis anbefalt pace er gyldig og ikke "N/A"
+     if (formattedRecommendedIntervalPace !== "N/A") {
          intervalSectionDiv.classList.remove('hidden');
      } else {
          intervalSectionDiv.classList.add('hidden');
@@ -346,8 +386,9 @@ function generateAndDisplayNegativeSplitPlan(distanceKm, paceFirstHalf, paceSeco
     splitsNote.classList.remove('hidden'); // Vis notat om negativ splitt
 
     // Sjekk for ugyldige input
-    if (distanceKm <= 0 || !Number.isFinite(paceFirstHalf) || !Number.isFinite(paceSecondHalf)) {
+    if (!Number.isFinite(distanceKm) || distanceKm <= 0 || !Number.isFinite(paceFirstHalf) || !Number.isFinite(paceSecondHalf)) {
         splitsContainer.classList.add('hidden'); // Skjul splitt-container hvis ugyldig
+        console.warn("Ugyldig input til generateAndDisplayNegativeSplitPlan");
         return;
     }
     splitsContainer.classList.remove('hidden'); // Vis splitt-container
@@ -370,17 +411,35 @@ function generateAndDisplayNegativeSplitPlan(distanceKm, paceFirstHalf, paceSeco
         } else { // Hvis segmentet krysser midtpunktet
             const distFirstHalf = halfwayKm - kmStart; // Distanse i første halvdel
             const distSecondHalf = kmEnd - halfwayKm; // Distanse i andre halvdel
-            const timeFirstPart = distFirstHalf * paceFirstHalf; // Tid i første del
-            const timeSecondPart = distSecondHalf * paceSecondHalf; // Tid i andre del
-            currentPace = (timeFirstPart + timeSecondPart) / kmDistance; // Beregn gjennomsnittspace for segmentet
+            // Sjekk om distansene er gyldige før beregning
+            if (Number.isFinite(distFirstHalf) && Number.isFinite(distSecondHalf)) {
+                 const timeFirstPart = distFirstHalf * paceFirstHalf; // Tid i første del
+                 const timeSecondPart = distSecondHalf * paceSecondHalf; // Tid i andre del
+                 // Sjekk om tidene er gyldige
+                 if (Number.isFinite(timeFirstPart) && Number.isFinite(timeSecondPart) && kmDistance > 0) {
+                    currentPace = (timeFirstPart + timeSecondPart) / kmDistance; // Beregn gjennomsnittspace for segmentet
+                 } else {
+                    console.warn("Ugyldig tid beregnet i splitt-kryssing");
+                    currentPace = NaN; // Sett til NaN hvis beregning feiler
+                 }
+            } else {
+                 console.warn("Ugyldig distanse beregnet i splitt-kryssing");
+                 currentPace = NaN; // Sett til NaN hvis beregning feiler
+            }
+        }
+
+        // Sjekk om currentPace er gyldig før bruk
+        if (!Number.isFinite(currentPace)) {
+            console.warn(`Ugyldig currentPace for km ${km}`);
+            continue; // Hopp til neste iterasjon hvis pace er ugyldig
         }
 
         const kmSeconds = kmDistance * currentPace; // Tid for dette segmentet
         accumulatedSeconds += kmSeconds; // Legg til i akkumulert tid
 
-        // Formater tidene for visning
+        // Formater tidene for visning (sjekk gyldighet først)
         const formattedPace = formatTimeMMSS(currentPace, true);
-        const formattedAccumulatedTime = formatTimeLong(accumulatedSeconds);
+        const formattedAccumulatedTime = Number.isFinite(accumulatedSeconds) ? formatTimeLong(accumulatedSeconds) : "N/A";
 
         // Lag HTML-element for splittiden
         const splitElement = document.createElement('div');
@@ -410,8 +469,9 @@ function generateAndDisplayAverageSplits(distanceKm, avgActualPaceSecondsPerKm, 
     splitsNote.classList.add('hidden'); // Skjul notat om negativ splitt
 
     // Sjekk for ugyldige input
-    if (distanceKm <= 0 || !Number.isFinite(avgActualPaceSecondsPerKm) || !Number.isFinite(avgAdjustedPaceSecondsPerKm)) {
+    if (!Number.isFinite(distanceKm) || distanceKm <= 0 || !Number.isFinite(avgActualPaceSecondsPerKm) || !Number.isFinite(avgAdjustedPaceSecondsPerKm)) {
         splitsContainer.classList.add('hidden'); // Skjul splitt-container hvis ugyldig
+        console.warn("Ugyldig input til generateAndDisplayAverageSplits");
         return;
     }
     splitsContainer.classList.remove('hidden'); // Vis splitt-container
@@ -421,8 +481,10 @@ function generateAndDisplayAverageSplits(distanceKm, avgActualPaceSecondsPerKm, 
     for (let km = 1; km <= fullKms; km++) {
         const actualSplitTimeSeconds = km * avgActualPaceSecondsPerKm; // Akkumulert faktisk tid
         const adjustedSplitTimeSeconds = km * avgAdjustedPaceSecondsPerKm; // Akkumulert justert tid
-        const formattedActualSplitTime = formatTimeLong(actualSplitTimeSeconds);
-        const formattedAdjustedSplitTime = formatTimeLong(adjustedSplitTimeSeconds);
+
+        // Formater tidene (sjekk gyldighet)
+        const formattedActualSplitTime = Number.isFinite(actualSplitTimeSeconds) ? formatTimeLong(actualSplitTimeSeconds) : "N/A";
+        const formattedAdjustedSplitTime = Number.isFinite(adjustedSplitTimeSeconds) ? formatTimeLong(adjustedSplitTimeSeconds) : "N/A";
 
         // Lag HTML-element for splittiden
         const splitElement = document.createElement('div');
@@ -439,8 +501,10 @@ function generateAndDisplayAverageSplits(distanceKm, avgActualPaceSecondsPerKm, 
     if (distanceKm > 0) {
         const finalActualTimeSeconds = distanceKm * avgActualPaceSecondsPerKm; // Endelig faktisk tid
         const finalAdjustedTimeSeconds = distanceKm * avgAdjustedPaceSecondsPerKm; // Endelig justert tid
-        const formattedFinalActualTime = formatTimeLong(finalActualTimeSeconds);
-        const formattedFinalAdjustedTime = formatTimeLong(finalAdjustedTimeSeconds);
+
+        // Formater tidene (sjekk gyldighet)
+        const formattedFinalActualTime = Number.isFinite(finalActualTimeSeconds) ? formatTimeLong(finalActualTimeSeconds) : "N/A";
+        const formattedFinalAdjustedTime = Number.isFinite(finalAdjustedTimeSeconds) ? formatTimeLong(finalAdjustedTimeSeconds) : "N/A";
 
         // Lag HTML-element for målgang
         const splitElement = document.createElement('div');
@@ -475,13 +539,19 @@ function generateAndDisplayPredictions(currentDistanceKm, equivalentFlatTotalSec
         // Ikke vis prediksjon for den distansen som faktisk ble løpt
         if (Math.abs(targetDistance.value - currentDistanceKm) < 0.001) return;
         // Sjekk for ugyldige input for Riegel-beregning
-        if (equivalentFlatTotalSeconds <= 0 || currentDistanceKm <= 0 || !Number.isFinite(equivalentFlatTotalSeconds)) return;
+        if (!Number.isFinite(equivalentFlatTotalSeconds) || equivalentFlatTotalSeconds <= 0 || !Number.isFinite(currentDistanceKm) || currentDistanceKm <= 0) {
+            console.warn("Ugyldig input til Riegel-prediksjon:", {equivalentFlatTotalSeconds, currentDistanceKm});
+            return;
+        }
 
         // Beregn predikert tid med Riegels formel
         const predictedSeconds = equivalentFlatTotalSeconds * Math.pow(targetDistance.value / currentDistanceKm, RIEGEL_EXPONENT);
 
         // Hopp over hvis prediksjonen er ugyldig (f.eks. NaN)
-        if (!Number.isFinite(predictedSeconds)) return;
+        if (!Number.isFinite(predictedSeconds) || predictedSeconds <= 0) {
+            console.warn(`Ugyldig prediksjon for ${targetDistance.name}: ${predictedSeconds}`);
+            return;
+        }
 
         const formattedPredictedTime = formatTimeLong(predictedSeconds); // Formater tiden
 
@@ -500,33 +570,23 @@ function generateAndDisplayPredictions(currentDistanceKm, equivalentFlatTotalSec
 // --- Hjelpefunksjoner ---
 
 /**
- * Formaterer totalt antall sekunder til "m:ss" eller "m:ss.s" format.
+ * Formaterer totalt antall sekunder til "m:ss.s" format.
+ * Mer robust håndtering av avrunding og grensetilfeller.
  * @param {number} totalSeconds - Antall sekunder.
- * @param {boolean} [includeMillis=false] - Om millisekunder (en desimal) skal inkluderes.
- * @returns {string} Formattert tidstreng, eller "Ugyldig".
+ * @param {boolean} [includeMillis=true] - Om millisekunder (en desimal) skal inkluderes.
+ * @returns {string} Formattert tidstreng, eller "N/A".
  */
-function formatTimeMMSS(totalSeconds, includeMillis = false) {
-    if (!Number.isFinite(totalSeconds)) return "Ugyldig"; // Returner "Ugyldig" hvis input er NaN eller Infinity
-    if (totalSeconds <= 0) return includeMillis ? "0:00.0" : "0:00"; // Håndter null eller negativ tid
+function formatTimeMMSS(totalSeconds, includeMillis = true) {
+    if (!Number.isFinite(totalSeconds) || totalSeconds < 0) return "N/A"; // Sjekk for gyldig, ikke-negativt tall
+    if (totalSeconds === 0) return includeMillis ? "0:00.0" : "0:00";
 
-    let minutes = Math.floor(totalSeconds / 60);
-    let remainingSeconds = totalSeconds % 60;
+    // Bruk Math.round på totalSeconds * 10 for å håndtere millisekund-avrunding korrekt
+    const totalTenthsOfSeconds = Math.round(totalSeconds * 10);
+    let minutes = Math.floor(totalTenthsOfSeconds / 600); // 600 tideler per minutt
+    let remainingTenths = totalTenthsOfSeconds % 600;
 
-    // Korriger for små negative tall pga. flyttallspresisjon
-    if (remainingSeconds < 0 && remainingSeconds > -1e-9) remainingSeconds = 0;
-
-    // Håndter tilfeller der sekunder runder opp til 60
-    let secondsPart = Math.floor(remainingSeconds);
-    let millisPart = Math.round((remainingSeconds - secondsPart) * 10); // Rund av millisekunder
-
-    if (millisPart === 10) {
-        millisPart = 0;
-        secondsPart += 1;
-    }
-    if (secondsPart === 60) {
-        secondsPart = 0;
-        minutes += 1;
-    }
+    let secondsPart = Math.floor(remainingTenths / 10);
+    let millisPart = remainingTenths % 10;
 
     // Bygg den formatterte strengen
     let formattedTime = `${minutes}:${secondsPart < 10 ? '0' : ''}${secondsPart}`;
@@ -541,26 +601,18 @@ function formatTimeMMSS(totalSeconds, includeMillis = false) {
 /**
  * Formaterer totalt antall sekunder til "h:mm:ss", "m:ss" eller "0:ss" format.
  * @param {number} totalSeconds - Antall sekunder.
- * @returns {string} Formattert tidstreng, eller "Ugyldig".
+ * @returns {string} Formattert tidstreng, eller "N/A".
  */
 function formatTimeLong(totalSeconds) {
-    if (!Number.isFinite(totalSeconds)) return "Ugyldig"; // Returner "Ugyldig" hvis input er NaN eller Infinity
-    if (totalSeconds <= 0) return "0:00"; // Håndter null eller negativ tid
+    if (!Number.isFinite(totalSeconds) || totalSeconds < 0) return "N/A"; // Sjekk for gyldig, ikke-negativt tall
+    if (totalSeconds === 0) return "0:00";
 
-    let hours = Math.floor(totalSeconds / 3600);
-    let minutes = Math.floor((totalSeconds % 3600) / 60);
-    // Rund av sekunder til nærmeste hele tall for denne visningen
-    let seconds = Math.round(totalSeconds % 60);
+    // Rund av totalSeconds til nærmeste sekund FØR vi deler opp
+    const roundedTotalSeconds = Math.round(totalSeconds);
 
-    // Håndter overflyt fra sekunder til minutter, og minutter til timer
-    if (seconds === 60) {
-        seconds = 0;
-        minutes += 1;
-    }
-    if (minutes === 60) {
-        minutes = 0;
-        hours += 1;
-    }
+    let hours = Math.floor(roundedTotalSeconds / 3600);
+    let minutes = Math.floor((roundedTotalSeconds % 3600) / 60);
+    let seconds = roundedTotalSeconds % 60;
 
     // Formater minutter og sekunder med ledende null hvis nødvendig
     const formattedMinutes = minutes < 10 ? '0' + minutes : minutes;
@@ -569,11 +621,9 @@ function formatTimeLong(totalSeconds) {
     // Bygg strengen basert på om timer eller minutter er større enn 0
     if (hours > 0) {
         return `${hours}:${formattedMinutes}:${formattedSeconds}`;
-    } else if (minutes > 0) {
-        return `${minutes}:${formattedSeconds}`;
     } else {
-        // Vis "0:ss" for tider under ett minutt
-        return `0:${formattedSeconds}`;
+        // Vis "m:ss" selv om minutter er 0, f.eks. "0:45"
+        return `${minutes}:${formattedSeconds}`;
     }
 }
 
@@ -616,3 +666,4 @@ function hideResults() {
 // --- Initialisering ---
 // Kall handleDistanceChange() ved lasting for å sikre at riktig felt vises/skjules basert på startverdi.
 handleDistanceChange();
+console.log("Kalkulator initialisert."); // Debugging
