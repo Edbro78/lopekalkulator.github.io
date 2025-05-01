@@ -1,0 +1,119 @@
+/* Bruk Inter som standard font */
+body {
+    font-family: 'Inter', sans-serif;
+}
+
+/* Fjern piler fra nummer-input i Webkit-baserte nettlesere (Chrome, Safari, Edge) */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* Fjern piler fra nummer-input i Firefox */
+input[type=number] {
+    -moz-appearance: textfield;
+}
+
+/* Grid-layout for hovedresultater */
+.results-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr)); /* 2 kolonner på små skjermer */
+    gap: 1rem; /* Mellomrom mellom elementer */
+}
+
+/* Endre til 3 kolonner på medium skjermer og større */
+@media (min-width: 768px) {
+    .results-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+/* Grid-layout for prediksjoner, tilpasser seg tilgjengelig bredde */
+.prediction-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); /* Automatisk tilpasning av kolonner */
+    gap: 0.75rem; /* Mindre mellomrom */
+}
+
+/* Styling for ikoner i resultatbokser */
+.result-item svg.main-icon {
+    width: 2em; /* Bredde */
+    height: 2em; /* Høyde */
+    margin-bottom: 0.5rem; /* Avstand under ikonet */
+    stroke: url(#iconGradient); /* Bruk SVG-gradient definert i HTML */
+}
+
+/* Styling for ikoner i seksjonsoverskrifter */
+.section-header svg {
+    width: 1.5em; /* Bredde */
+    height: 1.5em; /* Høyde */
+    margin-right: 0.5rem; /* Avstand til høyre for ikonet */
+    color: #4f46e5; /* Indigo farge */
+}
+
+/* Skjul SVG-gradient definisjoner visuelt */
+.hidden-gradient-defs {
+    position: absolute;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+}
+
+/* Styling for toggle-bryter (checkbox) */
+.toggle-checkbox {
+    appearance: none; /* Fjern standard utseende */
+    display: inline-block;
+    width: 2em; /* Bredde */
+    height: 1em; /* Høyde */
+    background-color: #e5e7eb; /* Grå bakgrunn (av) */
+    border-radius: 9999px; /* Full runding */
+    border: 1px solid #d1d5db; /* Grå kantlinje */
+    position: relative;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out; /* Myk overgang for bakgrunn */
+    vertical-align: middle; /* Juster vertikalt med tekst */
+}
+
+/* Styling for den indre sirkelen på toggle-bryteren */
+.toggle-checkbox::before {
+    content: "";
+    position: absolute;
+    left: 1px;
+    top: 1px;
+    width: calc(1em - 4px); /* Bredde tilpasset høyde og kantlinje */
+    height: calc(1em - 4px); /* Høyde tilpasset høyde og kantlinje */
+    background-color: white; /* Hvit sirkel */
+    border-radius: 50%; /* Sirkelform */
+    transition: transform 0.2s ease-in-out; /* Myk overgang for bevegelse */
+}
+
+/* Når toggle-bryteren er sjekket (på) */
+.toggle-checkbox:checked {
+    border-color: #4f46e5; /* Indigo kantlinje */
+    background-color: #4f46e5; /* Indigo bakgrunn */
+}
+
+/* Flytt den indre sirkelen til høyre når sjekket */
+.toggle-checkbox:checked::before {
+    transform: translateX(1em); /* Flytt sirkelen til høyre */
+}
+
+/* Styling for teksten ved siden av toggle-bryteren */
+.toggle-label {
+    display: inline-block;
+    cursor: pointer;
+    color: #374151; /* Mørk grå tekst */
+    margin-left: 0.5rem; /* Avstand til venstre */
+    vertical-align: middle; /* Juster vertikalt med bryteren */
+}
+
+/* Styling for avsnitt i intervall-info seksjonen */
+.interval-info p {
+    margin-bottom: 0.5rem; /* Avstand under avsnitt */
+}
+
+/* Styling for uthevet tekst i intervall-info seksjonen */
+.interval-info strong {
+    color: #4f46e5; /* Indigo farge */
+}
