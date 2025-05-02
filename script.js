@@ -47,7 +47,7 @@ const INTERVAL_PACE_ADJUSTMENT = 10;
 const PREDICTION_DISTANCES = [
     { name: '400 m', value: 0.4 }, { name: '1500 m', value: 1.5 }, { name: '3 km', value: 3 },
     { name: '5 km', value: 5 }, { name: '10 km', value: 10 }, { name: '15 km', value: 15 },
-    { name: 'Halvmaraton', value: HALF_MARATHON_KM }, { name: 'Maraton', value: 42.195 }
+    { name: 'Halvmaraton', value: HALF_MARATHON_KM }, { name: 'Maraton', value: 42.195 }, { name: '12 km', value: 12.000 }
 ];
 
 // --- Hjelpefunksjoner ---
