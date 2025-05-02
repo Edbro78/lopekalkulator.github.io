@@ -41,9 +41,9 @@ const predictionsGridDiv = document.getElementById('predictions-grid');
 // --- Konstanter ---
 const RIEGEL_EXPONENT = 1.06;
 const ELEVATION_ADJUSTMENT_FACTOR = 10;
-const NEGATIVE_SPLIT_FACTOR = 0.02;
+const NEGATIVE_SPLIT_FACTOR = 0.01;
 const HALF_MARATHON_KM = 21.0975;
-const INTERVAL_PACE_ADJUSTMENT = 5;
+const INTERVAL_PACE_ADJUSTMENT = 10;
 const PREDICTION_DISTANCES = [
     { name: '400 m', value: 0.4 }, { name: '1500 m', value: 1.5 }, { name: '3 km', value: 3 },
     { name: '5 km', value: 5 }, { name: '10 km', value: 10 }, { name: '15 km', value: 15 },
